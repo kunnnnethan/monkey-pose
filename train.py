@@ -28,8 +28,14 @@ class Train:
         init()
         print("Using device:", self.device)
 
-        train_set, train_dataloader = load_data(self.configs['data_path'], self.configs['batch_size'], self.configs['img_size'], 
-                                                self.configs['num_joints'], self.configs['sigma'], True)
+        train_set, train_dataloader = load_data(
+            self.configs['data_path'], 
+            self.configs['batch_size'], 
+            self.configs['img_size'], 
+            self.configs['num_joints'], 
+            self.configs['sigma'], 
+            True
+        )
         print("The number of data in train set: ", train_set.__len__())
 
         self.model = self.model.to(self.device)

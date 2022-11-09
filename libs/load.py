@@ -160,7 +160,7 @@ class MonkeyDataset(Dataset):
         return metadata
 
 
-def load_data(data_path, batch_size, img_size, stride, sigma, shuffle):
-    dataset = MonkeyDataset(data_path, img_size, stride, sigma)
+def load_data(data_path, batch_size, img_size, num_joints, sigma, shuffle):
+    dataset = MonkeyDataset(data_path, img_size, num_joints, sigma)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
     return dataset, dataloader
