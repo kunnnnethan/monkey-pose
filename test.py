@@ -94,7 +94,7 @@ class Test:
                     pred_img = draw_joints(pred_img, pred_landmark)
                     targ_img = draw_joints(targ_img, targ_landmark)
 
-                    for i in range(17):
+                    for i in range(self.configs['num_joints']):
                         pred = pred_heatmap[:, :, i]
                         print(np.unique(pred))
                         pred = cv2.normalize(pred, pred, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, 
