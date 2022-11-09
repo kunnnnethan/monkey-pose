@@ -1,74 +1,62 @@
 import numpy as np
 import cv2
+import yaml
 from tqdm import tqdm
 import torch.nn.functional as F
 
 from libs.load import load_data
+from libs.draw import draw_limbs, draw_joints
 
 
 if __name__ == "__main__":
-    batch_size = 1
-    img_size = 368
-    stride = 8 
-    sigma = 1
-    train_set, train_dataloader = load_data("data/train", batch_size, img_size, stride, sigma, False)
+    configs = None
+    with open("configs/train.yaml", "r") as stream:
+        try:
+            configs = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    train_set, train_dataloader = load_data(
+        configs['data_path'], 
+        configs['batch_size'], 
+        configs['img_size'], 
+        configs['num_joints'], 
+        configs['sigma'], 
+        False
+    )
 
     print("length of train set: ", train_set.__len__())
-    for i, (images, landmarks, heatmaps, centermap) in enumerate(tqdm(train_dataloader)):
+    for _, (images, heatmaps, joints_weight, data) in enumerate(tqdm(train_dataloader)):
+        images[:, 0] = images[:, 0] * 0.229 + 0.485
+        images[:, 1] = images[:, 1] * 0.224 + 0.456
+        images[:, 2] = images[:, 2] * 0.225 + 0.406
         images = images * 255.0
-        images = images.squeeze(0).numpy().transpose(1, 2, 0).astype(np.uint8)
-        images = cv2.cvtColor(images, cv2.COLOR_BGR2RGB)
-        landmarks = landmarks.squeeze(0).numpy()
 
-        heatmaps = F.interpolate(heatmaps, size=(img_size, img_size), mode='bilinear', align_corners=True)
-        heatmaps = heatmaps.squeeze(0).numpy().transpose(1, 2, 0)
-        centermap = F.interpolate(centermap, size=(img_size, img_size), mode='bilinear', align_corners=True)
-        centermap = centermap.squeeze(0).numpy().transpose(1, 2, 0)
-        heatmaps = np.concatenate([centermap, heatmaps], axis=2)
+        landmarks = data['landmark']
+        landmarks = landmarks * configs['img_size']
+        heatmaps = F.interpolate(heatmaps, size=(configs['img_size'], configs['img_size']), mode='bilinear', align_corners=True)
 
-        annotations = []
-        for i in range(len(landmarks)):
-            x, y = int(landmarks[i, 0] * img_size), int(landmarks[i, 1] * img_size)
-            annotations.append((x, y))
+        for j in range(configs['batch_size']):
+            img = images[j].numpy().transpose(1, 2, 0).astype(np.uint8)
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-        # eyes and nose
-        images = cv2.line(images, annotations[0], annotations[2], (250, 230, 230), 2)
-        images = cv2.line(images, annotations[1], annotations[2], (250, 230, 230), 2)
-        # neck
-        images = cv2.line(images, annotations[3], annotations[4], (0, 0, 255), 2)
-        # body
-        images = cv2.line(images, annotations[4], annotations[11], (0, 165, 255), 2)
-        # tail
-        images = cv2.line(images, annotations[11], annotations[16], (205, 250, 255), 2)
-        # right hand
-        images = cv2.line(images, annotations[4], annotations[5], (255, 0, 0), 2)
-        images = cv2.line(images, annotations[5], annotations[6], (255, 0, 0), 2)
-        images = cv2.line(images, annotations[6], annotations[7], (255, 0, 0), 2)
-        # left hand
-        images = cv2.line(images, annotations[4], annotations[8], (230, 216, 173), 2)
-        images = cv2.line(images, annotations[8], annotations[9], (230, 216, 173), 2)
-        images = cv2.line(images, annotations[9], annotations[10], (230, 216, 173), 2)
-        # right leg
-        images = cv2.line(images, annotations[11], annotations[12], (0, 100, 0), 2)
-        images = cv2.line(images, annotations[12], annotations[13], (0, 100, 0), 2)
-        # left leg
-        images = cv2.line(images, annotations[11], annotations[14], (144, 238, 144), 2)
-        images = cv2.line(images, annotations[14], annotations[15], (144, 238, 144), 2)
+            landmark = landmarks[j].numpy().astype(np.int32)
 
-        # landmarks
-        for a in annotations:
-          images = cv2.circle(images, a, 1, (0, 0, 0), 3)
+            img = draw_limbs(img, landmark)
+            img = draw_joints(img, landmark)
 
-        for i in range(19):
-            heatmap = heatmaps[:, :, i]
-            
-            heatmap = cv2.normalize(heatmap, heatmap, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-            heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_JET)
-            
-            display = images * 0.8 + heatmap * 0.2
-            cv2.imshow("img", display.astype(np.uint8))
-            key = cv2.waitKey(0)
-            if key == ord('q'):
-                print("quit display")
-                exit(1)
+            heatmap = heatmaps[j].numpy().transpose(1, 2, 0)
+
+            for i in range(configs['num_joints']):
+                joint = heatmap[:, :, i]
+                
+                joint = cv2.normalize(joint, joint, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                joint = cv2.applyColorMap(joint, cv2.COLORMAP_JET)
+                
+                display = img * 0.8 + joint * 0.2
+                cv2.imshow("img", display.astype(np.uint8))
+                key = cv2.waitKey(0)
+                if key == ord('q'):
+                    print("quit display")
+                    exit(1)
    

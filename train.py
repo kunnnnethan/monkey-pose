@@ -5,7 +5,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from libs.load import load_data
-from model.CPM import CPM
+from libs.loss import JointsMSELoss
 from model.HRNet import HRNet
 
 
@@ -21,7 +21,6 @@ class Train:
     def __init__(self, configs):
         self.configs = configs
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        #self.model = CPM(self.configs['num_joints'])
         self.model = HRNet(32, self.configs['num_joints'])
 
 
@@ -30,12 +29,12 @@ class Train:
         print("Using device:", self.device)
 
         train_set, train_dataloader = load_data(self.configs['data_path'], self.configs['batch_size'], self.configs['img_size'], 
-                                                self.configs['stride'], self.configs['sigma'], True)
+                                                self.configs['num_joints'], self.configs['sigma'], True)
         print("The number of data in train set: ", train_set.__len__())
 
         self.model = self.model.to(self.device)
 
-        criterion = nn.MSELoss()
+        criterion = JointsMSELoss(self.configs['use_joints_weight'])
 
         # define loss function and optimizer
         #optimizer = torch.optim.SGD(self.model.parameters(), lr=self.configs['learning_rate'], 
@@ -47,21 +46,15 @@ class Train:
             train_acc, val_acc = 0, 0
 
             self.model.train()
-            for i, (images, landmarks, heatmaps, centermaps) in enumerate(tqdm(train_dataloader)):
+            for i, (images, heatmaps, joints_weight, data) in enumerate(tqdm(train_dataloader)):
                 images = images.to(self.device)
                 heatmaps = heatmaps.to(self.device)
-                centermaps = centermaps.to(self.device)
+                joints_weight = joints_weight.to(self.device)
 
                 optimizer.zero_grad()
                 pred = self.model(images)
                 
-                loss = criterion(pred, heatmaps)
-                #loss2 = criterion(heat2, heatmaps)
-                #loss3 = criterion(heat3, heatmaps)
-                #loss4 = criterion(heat4, heatmaps)
-                #loss5 = criterion(heat5, heatmaps)
-                #loss6 = criterion(heat6, heatmaps)
-                #loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+                loss = criterion(pred, heatmaps, joints_weight)
 
                 loss.backward()
                 optimizer.step()

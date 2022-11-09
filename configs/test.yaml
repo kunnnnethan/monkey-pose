@@ -6,5 +6,4 @@ model_name: "CPM.model"
 data_path: "data/train"
 batch_size: 16
 img_size: 384
-stride: 4
 sigma: 3

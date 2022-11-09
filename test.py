@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from libs.load import load_data
-from model.CPM import CPM
+from libs.draw import draw_limbs, draw_joints
 from model.HRNet import HRNet
 
 
@@ -30,11 +30,21 @@ class Test:
         self.model = self.model.to(self.device)
         self.model.load_state_dict(weight)
 
+    def get_keypoints(self, pred_heatmap):
+        kpts = []
+        for j in range(self.configs['num_joints']):
+            m = pred_heatmap[:, :, j]
+            h, w = np.unravel_index(m.argmax(), m.shape)
+            x = int(w * self.configs['img_size'] / m.shape[1])
+            y = int(h * self.configs['img_size'] / m.shape[0])
+            kpts.append([x,y])
+        return np.array(kpts)
+
     def detect(self):
         print("Using device:", self.device)
 
         test_set, test_dataloader = load_data(self.configs['data_path'], self.configs['batch_size'], self.configs['img_size'], 
-                                                self.configs['stride'], self.configs['sigma'], False)
+                                                self.configs['num_joints'], self.configs['sigma'], False)
         print("The number of data in test set: ", test_set.__len__())
 
         self.load_model()
@@ -46,57 +56,58 @@ class Test:
         # Testing Stage
         # --------------------------
         with torch.no_grad():
-            for i, (images, landmarks, heatmaps, centermaps) in enumerate(tqdm(test_dataloader)):    
+            for i, (images, heatmaps, joints_weight, data) in enumerate(tqdm(test_dataloader)):
                 images = images.to(self.device)
                 heatmaps = heatmaps.to(self.device)
-                centermaps = centermaps.to(self.device)
-                #heat1, heat2, heat3, heat4, heat5, heat6 = self.model(images, centermaps)
-                heat6 = self.model(images)
+
+                output = self.model(images)
                 
-
+                images[:, 0] = images[:, 0] * 0.229 + 0.485
+                images[:, 1] = images[:, 1] * 0.224 + 0.456
+                images[:, 2] = images[:, 2] * 0.225 + 0.406
                 images = images * 255.0
-                pred_maps = heat6
-                targ_maps = heatmaps
-                pred_maps = F.interpolate(pred_maps, size=(self.configs['img_size'], self.configs['img_size']), 
+
+                landmarks = data['landmark']
+                landmarks = landmarks * configs['img_size']
+
+                pred_maps = F.interpolate(output, size=(self.configs['img_size'], self.configs['img_size']), 
                                             mode='bilinear', align_corners=True)
-                targ_maps = F.interpolate(targ_maps, size=(self.configs['img_size'], self.configs['img_size']), 
+                targ_maps = F.interpolate(heatmaps, size=(self.configs['img_size'], self.configs['img_size']), 
                                             mode='bilinear', align_corners=True)
 
-                for i in range(len(pred_maps)):
+                for i in range(self.configs['batch_size']):
                     img = images[i]
                     img = img.cpu().numpy().transpose(1, 2, 0)
                     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                    pred_img = img.copy()
+                    targ_img = img.copy()
 
-                    preds = pred_maps[i]
-                    preds = preds.cpu().numpy().transpose(1, 2, 0)
-                    targs = targ_maps[i]
-                    targs = targs.cpu().numpy().transpose(1, 2, 0)
+                    pred_heatmap = pred_maps[i].cpu().numpy().transpose(1, 2, 0)
+                    targ_heatmap = targ_maps[i].cpu().numpy().transpose(1, 2, 0)
 
-                    kpts = []
+                    pred_landmark = self.get_keypoints(pred_heatmap)
+                    targ_landmark = landmarks[i].cpu().numpy().astype(np.int32)
+
+                    pred_img = draw_limbs(pred_img, pred_landmark)
+                    targ_img = draw_limbs(targ_img, targ_landmark)
+
+                    pred_img = draw_joints(pred_img, pred_landmark)
+                    targ_img = draw_joints(targ_img, targ_landmark)
+
                     for i in range(17):
-                        m = preds[:, :, i]
-                        h, w = np.unravel_index(m.argmax(), m.shape)
-                        x = int(w * self.configs['img_size'] / m.shape[1])
-                        y = int(h * self.configs['img_size'] / m.shape[0])
-                        kpts.append([x,y])
-
-                    for i in range(17):
-                        pred = preds[:, :, i]
+                        pred = pred_heatmap[:, :, i]
                         print(np.unique(pred))
                         pred = cv2.normalize(pred, pred, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, 
                                                     dtype=cv2.CV_8U)
                         pred = cv2.applyColorMap(pred, cv2.COLORMAP_JET)
-                        print(np.unique(pred))
 
-                        targ = targs[:, :, i]
+                        targ = targ_heatmap[:, :, i]
                         targ = cv2.normalize(targ, targ, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, 
                                                     dtype=cv2.CV_8U)
                         targ = cv2.applyColorMap(targ, cv2.COLORMAP_JET)
                     
-                        display1 = img * 0.8 + pred * 0.2
-                        display2 = img * 0.8 + targ * 0.2
-
-                        display1 = cv2.circle(display1, kpts[i], radius=1, thickness=5, color=(0, 0, 0))
+                        display1 = pred_img * 0.8 + pred * 0.2
+                        display2 = targ_img * 0.8 + targ * 0.2
 
                         display = np.concatenate((display1, display2), axis=1).astype(np.uint8)
                         cv2.imshow("img", display)
