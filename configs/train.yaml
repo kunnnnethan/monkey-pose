@@ -1,15 +1,15 @@
 # model
 num_joints: 17
-model_name: "CPM.model"
+model_name: "HRNet_with_joints_weight.model"
 
 # dataset
-data_path: "data/val"
+data_path: "data/train"
 batch_size: 16
 img_size: 384
 sigma: 3
 
 # hyperparameters
-epochs: 50
+epochs: 30
 learning_rate: 0.001
 
 # loss

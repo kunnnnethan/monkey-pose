@@ -19,7 +19,6 @@ class JointsMSELoss(nn.Module):
             weight = joints_weight[:, idx].reshape(batch_size, -1)
 
             if self.use_joints_weight:
-                print("use_joints_weight")
                 loss += self.criterion(
                     torch.mul(heatmap_pred, weight),
                     torch.mul(heatmap_gt, weight)
