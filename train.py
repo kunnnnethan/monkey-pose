@@ -7,6 +7,7 @@ from tqdm import tqdm
 from libs.load import load_data
 from libs.loss import JointsMSELoss
 from model.HRNet import HRNet
+from model.CPM import CPM
 
 
 def init():
@@ -21,7 +22,15 @@ class Train:
     def __init__(self, configs):
         self.configs = configs
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = HRNet(32, self.configs['num_joints'])
+        self.model = None
+        if configs['model_type'] == "CPM":
+            self.model = CPM(self.configs['num_joints'])
+        elif configs['model_type'] == "HRNet":
+            self.model = HRNet(32, self.configs['num_joints'])
+        else:
+            raise NotImplementedError("Please specify model type in CPM or HRNet")
+        if not os.path.exists("weights/"):
+            os.mkdir("weights/")
 
 
     def train(self):
@@ -30,21 +39,23 @@ class Train:
 
         train_set, train_dataloader = load_data(
             self.configs['data_path'], 
+            self.configs['model_type'],
             self.configs['batch_size'], 
             self.configs['img_size'], 
             self.configs['num_joints'], 
-            self.configs['sigma'], 
+            self.configs['sigma'],
             True
         )
         print("The number of data in train set: ", train_set.__len__())
 
         self.model = self.model.to(self.device)
 
-        criterion = JointsMSELoss(self.configs['use_joints_weight'])
+        criterion = None
+        if self.configs['model_type'] == "CPM":
+            criterion = nn.MSELoss()
+        else:
+            criterion = JointsMSELoss(self.configs['use_joints_weight'])
 
-        # define loss function and optimizer
-        #optimizer = torch.optim.SGD(self.model.parameters(), lr=self.configs['learning_rate'], 
-        #                            momentum=self.configs['momentum'], weight_decay=self.configs['weight_decay'])
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.configs['learning_rate'])
 
         for epoch in range(self.configs['epochs']):
@@ -58,9 +69,21 @@ class Train:
                 joints_weight = joints_weight.to(self.device)
 
                 optimizer.zero_grad()
-                pred = self.model(images)
-                
-                loss = criterion(pred, heatmaps, joints_weight)
+
+                loss = None
+                if self.configs['model_type'] == "CPM":
+                    pred1, pred2, pred3, pred4, pred5, pred6 = self.model(images)
+
+                    loss1 = criterion(pred1, heatmaps)
+                    loss2 = criterion(pred2, heatmaps)
+                    loss3 = criterion(pred3, heatmaps)
+                    loss4 = criterion(pred4, heatmaps)
+                    loss5 = criterion(pred5, heatmaps)
+                    loss6 = criterion(pred6, heatmaps)
+                    loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+                else:
+                    pred = self.model(images)
+                    loss = criterion(pred, heatmaps, joints_weight)
 
                 loss.backward()
                 optimizer.step()

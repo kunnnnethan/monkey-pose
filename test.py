@@ -9,15 +9,21 @@ from tqdm import tqdm
 
 from libs.load import load_data
 from libs.draw import draw_limbs, draw_joints
+from libs.utils import get_max_preds
 from model.HRNet import HRNet
+from model.CPM import CPM
 
 
 class Test:
     def __init__(self, configs):
         self.configs = configs
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        #self.model = CPM(self.configs['num_joints'])
-        self.model = HRNet(32, self.configs['num_joints'])
+        if configs['model_type'] == "CPM":
+            self.model = CPM(self.configs['num_joints'])
+        elif configs['model_type'] == "HRNet":
+            self.model = HRNet(32, self.configs['num_joints'])
+        else:
+            raise NotImplementedError("Please specify model type in CPM or HRNet")
 
     def load_model(self):
         weight_path = os.path.join("weights", self.configs['model_name'])
@@ -30,21 +36,18 @@ class Test:
         self.model = self.model.to(self.device)
         self.model.load_state_dict(weight)
 
-    def get_keypoints(self, pred_heatmap):
-        kpts = []
-        for j in range(self.configs['num_joints']):
-            m = pred_heatmap[:, :, j]
-            h, w = np.unravel_index(m.argmax(), m.shape)
-            x = int(w * self.configs['img_size'] / m.shape[1])
-            y = int(h * self.configs['img_size'] / m.shape[0])
-            kpts.append([x,y])
-        return np.array(kpts)
-
     def detect(self):
         print("Using device:", self.device)
 
-        test_set, test_dataloader = load_data(self.configs['data_path'], self.configs['batch_size'], self.configs['img_size'], 
-                                                self.configs['num_joints'], self.configs['sigma'], False)
+        test_set, test_dataloader = load_data(
+            self.configs['data_path'], 
+            self.configs['model_type'],
+            self.configs['batch_size'], 
+            self.configs['img_size'], 
+            self.configs['num_joints'], 
+            self.configs['sigma'], 
+            False
+        )
         print("The number of data in test set: ", test_set.__len__())
 
         self.load_model()
@@ -60,15 +63,20 @@ class Test:
                 images = images.to(self.device)
                 heatmaps = heatmaps.to(self.device)
 
-                output = self.model(images)
+                output = None
+                if self.configs['model_type'] == "CPM":
+                    _, _, _, _, _, output = self.model(images)
+                else:
+                    output = self.model(images)
                 
                 images[:, 0] = images[:, 0] * 0.229 + 0.485
                 images[:, 1] = images[:, 1] * 0.224 + 0.456
                 images[:, 2] = images[:, 2] * 0.225 + 0.406
                 images = images * 255.0
 
-                landmarks = data['landmark']
-                landmarks = landmarks * configs['img_size']
+                pred_landmarks, maxvals = get_max_preds(output.cpu().numpy())
+                pred_landmarks = pred_landmarks * configs['img_size']
+                landmarks = data['landmark'] * configs['img_size']
 
                 pred_maps = F.interpolate(output, size=(self.configs['img_size'], self.configs['img_size']), 
                                             mode='bilinear', align_corners=True)
@@ -85,7 +93,7 @@ class Test:
                     pred_heatmap = pred_maps[i].cpu().numpy().transpose(1, 2, 0)
                     targ_heatmap = targ_maps[i].cpu().numpy().transpose(1, 2, 0)
 
-                    pred_landmark = self.get_keypoints(pred_heatmap)
+                    pred_landmark = pred_landmarks[i].astype(np.int32)
                     targ_landmark = landmarks[i].cpu().numpy().astype(np.int32)
 
                     pred_img = draw_limbs(pred_img, pred_landmark)
@@ -94,14 +102,15 @@ class Test:
                     pred_img = draw_joints(pred_img, pred_landmark)
                     targ_img = draw_joints(targ_img, targ_landmark)
 
-                    for i in range(self.configs['num_joints']):
-                        pred = pred_heatmap[:, :, i]
-                        print(np.unique(pred))
+                    for j in range(self.configs['num_joints']):
+                        print(maxvals[i][j])
+
+                        pred = pred_heatmap[:, :, j]
                         pred = cv2.normalize(pred, pred, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, 
                                                     dtype=cv2.CV_8U)
                         pred = cv2.applyColorMap(pred, cv2.COLORMAP_JET)
 
-                        targ = targ_heatmap[:, :, i]
+                        targ = targ_heatmap[:, :, j]
                         targ = cv2.normalize(targ, targ, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, 
                                                     dtype=cv2.CV_8U)
                         targ = cv2.applyColorMap(targ, cv2.COLORMAP_JET)

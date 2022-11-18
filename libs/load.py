@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class MonkeyDataset(Dataset):
-    def __init__(self, data_path, img_size, num_joints, sigma):
+    def __init__(self, data_path, model_type, img_size, num_joints, sigma):
         super().__init__()
         json_file_path = glob.glob(os.path.join(data_path, "*.json"))[0]
         metadata = self.read_data(json_file_path)
@@ -20,7 +20,11 @@ class MonkeyDataset(Dataset):
         self.visibilities = metadata['visibilities']
 
         self.img_size = img_size
-        self.map_size = self.img_size // 4
+        self.map_size = None
+        if model_type == "CPM":
+            self.map_size = self.img_size // 8
+        else:
+            self.map_size = self.img_size // 4
         self.sigma = sigma
 
         self.num_joints = num_joints
@@ -160,7 +164,7 @@ class MonkeyDataset(Dataset):
         return metadata
 
 
-def load_data(data_path, batch_size, img_size, num_joints, sigma, shuffle):
-    dataset = MonkeyDataset(data_path, img_size, num_joints, sigma)
+def load_data(data_path, model_type, batch_size, img_size, num_joints, sigma, shuffle):
+    dataset = MonkeyDataset(data_path, model_type, img_size, num_joints, sigma)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
     return dataset, dataloader

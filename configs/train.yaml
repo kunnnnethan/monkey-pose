@@ -1,6 +1,7 @@
 # model
 num_joints: 17
-model_name: "HRNet_with_joints_weight.model"
+model_type: "CPM"
+model_name: "test.model"
 
 # dataset
 data_path: "data/train"
