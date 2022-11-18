@@ -26,7 +26,7 @@ model_type: "CPM"
 model_name: "test.model"
 ```
 
-For testing, you can also download weights that I pretrained for the CPM and HRNet model, and put it under the "weights" folder.
+For testing, you can also download weights that I pretrained for the CPM and HRNet model. Make sure to put it under the "weights" folder after downloaded it.
 
 [CPM](https://drive.google.com/uc?export=download&id=1jHdgP8fga_vg8KSEcYPp2k9lQZLiQ5kQ) </br>
 [HRNet](https://drive.google.com/uc?export=download&id=1h0au3bN4VKak_jiqc1O_fSk2YlCRs2U2)
