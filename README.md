@@ -4,7 +4,7 @@
 
 After downloading train and validation data, put it under the "data/" file. Use display_data.py to visualize it to make sure there are no errors.
 
-For example:
+For example: </br>
 <img src="https://i.imgur.com/hQs97A9.png" alt="example" height="300"/>
 
 
