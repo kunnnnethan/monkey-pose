@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
     train_set, train_dataloader = load_data(
         configs['data_path'], 
+        configs['model_type'], 
         configs['batch_size'], 
         configs['img_size'], 
         configs['num_joints'], 
