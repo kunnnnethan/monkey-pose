@@ -23,6 +23,8 @@ class MonkeyDataset(Dataset):
         self.map_size = None
         if model_type == "CPM":
             self.map_size = self.img_size // 8
+        elif model_type == "custom":
+            self.map_size = self.img_size // 4
         else:
             self.map_size = self.img_size // 4
         self.sigma = sigma
@@ -54,7 +56,11 @@ class MonkeyDataset(Dataset):
         img, bbox, landmark = self._normalize(img, bbox, landmark)
 
         # generate groundtruth heatmap
-        heatmaps = self.gen_heatmap(landmark)
+        #heatmaps1 = self.gen_heatmap(landmark, 9)
+        #heatmaps2 = self.gen_heatmap(landmark, 3)
+        #heatmaps3 = self.gen_heatmap(landmark, 1)
+        #heatmaps = np.concatenate([heatmaps1, heatmaps2, heatmaps3])
+        heatmaps = self.gen_heatmap(landmark, 1)
 
         # generate weights for different joints while training
         joints_weight = self.gen_weights(visibility)
@@ -98,9 +104,9 @@ class MonkeyDataset(Dataset):
 
         return new_img, bbox, landmark
 
-    def gen_heatmap(self, landmark):
+    def gen_heatmap(self, landmark, scale):
         target = np.zeros((self.num_joints, self.map_size, self.map_size), dtype=np.float32)
-        tmp_size = self.sigma * 3
+        tmp_size = (self.sigma * scale) * 3
 
         for joint_id in range(self.num_joints):
             mu_x = int(landmark[joint_id][0] * self.map_size)
@@ -118,7 +124,7 @@ class MonkeyDataset(Dataset):
             y = x[:, np.newaxis]
             x0 = y0 = size // 2
 
-            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * self.sigma ** 2))
+            g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * (self.sigma * scale) ** 2))
 
             # Usable gaussian range
             g_x = max(0, -ul[0]), min(br[0], self.map_size) - ul[0]

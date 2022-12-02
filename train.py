@@ -8,6 +8,7 @@ from libs.load import load_data
 from libs.loss import JointsMSELoss
 from model.HRNet import HRNet
 from model.CPM import CPM
+from model.CPM2 import CPM2
 
 
 def init():
@@ -26,7 +27,9 @@ class Train:
         if configs['model_type'] == "CPM":
             self.model = CPM(self.configs['num_joints'])
         elif configs['model_type'] == "HRNet":
-            self.model = HRNet(32, self.configs['num_joints'])
+            self.model = HRNet(48, self.configs['num_joints'])
+        elif configs['model_type'] == "custom":
+            self.model = CPM2(self.configs['num_joints'], 48, 32)
         else:
             raise NotImplementedError("Please specify model type in CPM or HRNet")
         if not os.path.exists("weights/"):
@@ -81,6 +84,22 @@ class Train:
                     loss5 = criterion(pred5, heatmaps)
                     loss6 = criterion(pred6, heatmaps)
                     loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+                elif self.configs['model_type'] == "custom":
+                    #pred1, pred2, pred3, pred4, pred5, pred6 = self.model(images)
+                    pred1, pred2, pred3, pred4 = self.model(images)
+                    #heatmaps1 = heatmaps[:, :self.configs['num_joints']]
+                    #heatmaps2 = heatmaps[:, self.configs['num_joints']:self.configs['num_joints'] * 2]
+                    #heatmaps3 = heatmaps[:, self.configs['num_joints'] * 2:]
+
+                    loss1 = criterion(pred1, heatmaps, joints_weight)
+                    loss2 = criterion(pred2, heatmaps, joints_weight)
+                    loss3 = criterion(pred3, heatmaps, joints_weight)
+                    loss4 = criterion(pred4, heatmaps, joints_weight)
+                    #loss4 = criterion(pred4, heatmaps, joints_weight)
+                    #loss5 = criterion(pred5, heatmaps, joints_weight)
+                    #loss6 = criterion(pred6, heatmaps, joints_weight)
+                    #loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
+                    loss = loss1 + loss2 + loss3 + loss4
                 else:
                     pred = self.model(images)
                     loss = criterion(pred, heatmaps, joints_weight)
