@@ -42,6 +42,7 @@ class Train:
 
         train_set, train_dataloader = load_data(
             self.configs['data_path'], 
+            self.configs['preprocess'],
             self.configs['model_type'],
             self.configs['batch_size'], 
             self.configs['img_size'], 
@@ -66,7 +67,7 @@ class Train:
             train_acc, val_acc = 0, 0
 
             self.model.train()
-            for i, (images, heatmaps, joints_weight, data) in enumerate(tqdm(train_dataloader)):
+            for i, (images, heatmaps, joints_weight, landmarks) in enumerate(tqdm(train_dataloader)):
                 images = images.to(self.device)
                 heatmaps = heatmaps.to(self.device)
                 joints_weight = joints_weight.to(self.device)
@@ -85,21 +86,13 @@ class Train:
                     loss6 = criterion(pred6, heatmaps)
                     loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                 elif self.configs['model_type'] == "custom":
-                    #pred1, pred2, pred3, pred4, pred5, pred6 = self.model(images)
-                    pred1, pred2, pred3, pred4 = self.model(images)
-                    #heatmaps1 = heatmaps[:, :self.configs['num_joints']]
-                    #heatmaps2 = heatmaps[:, self.configs['num_joints']:self.configs['num_joints'] * 2]
-                    #heatmaps3 = heatmaps[:, self.configs['num_joints'] * 2:]
+                    pred1, pred2, pred3 = self.model(images)
 
                     loss1 = criterion(pred1, heatmaps, joints_weight)
                     loss2 = criterion(pred2, heatmaps, joints_weight)
                     loss3 = criterion(pred3, heatmaps, joints_weight)
-                    loss4 = criterion(pred4, heatmaps, joints_weight)
-                    #loss4 = criterion(pred4, heatmaps, joints_weight)
-                    #loss5 = criterion(pred5, heatmaps, joints_weight)
-                    #loss6 = criterion(pred6, heatmaps, joints_weight)
-                    #loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-                    loss = loss1 + loss2 + loss3 + loss4
+
+                    loss = loss1 + loss2 + loss3
                 else:
                     pred = self.model(images)
                     loss = criterion(pred, heatmaps, joints_weight)

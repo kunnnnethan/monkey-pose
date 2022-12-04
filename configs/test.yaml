@@ -1,10 +1,19 @@
 # model
 num_joints: 17
-model_type: "HRNet"
-model_name: "HRNet.model"
+model_type: "custom"
+model_name: "CPM10.model"
 
 # dataset
-data_path: "data/train"
+data_path: "data/val"
 batch_size: 16
 img_size: 384
 sigma: 3
+
+# result
+display_results: False
+
+# augmentation
+preprocess:
+  rotate: True
+  horizontal_flip: True
+  hsv: True

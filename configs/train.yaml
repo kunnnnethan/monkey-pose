@@ -1,7 +1,7 @@
 # model
 num_joints: 17
-model_type: "CPM"
-model_name: "test.model"
+model_type: "custom"
+model_name: "CPM10.model"
 
 # dataset
 data_path: "data/train"
@@ -15,3 +15,9 @@ learning_rate: 0.001
 
 # loss
 use_joints_weight: True
+
+# augmentation
+preprocess:
+  rotate: True
+  horizontal_flip: True
+  hsv: True

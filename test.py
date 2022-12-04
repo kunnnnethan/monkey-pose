@@ -45,6 +45,7 @@ class Test:
 
         test_set, test_dataloader = load_data(
             self.configs['data_path'], 
+            self.configs['preprocess'],
             self.configs['model_type'],
             self.configs['batch_size'], 
             self.configs['img_size'], 
@@ -63,7 +64,7 @@ class Test:
         # Testing Stage
         # --------------------------
         with torch.no_grad():
-            for i, (images, heatmaps, joints_weight, data) in enumerate(tqdm(test_dataloader)):
+            for i, (images, heatmaps, joints_weight, landmarks) in enumerate(tqdm(test_dataloader)):
                 images = images.to(self.device)
                 heatmaps = heatmaps.to(self.device)
 
@@ -80,11 +81,9 @@ class Test:
                 images[:, 2] = images[:, 2] * 0.225 + 0.406
                 images = images * 255.0
 
-                #heatmaps = heatmaps[:, :self.configs['num_joints']]
-
                 pred_landmarks, maxvals = get_max_preds(output.cpu().numpy())
                 pred_landmarks = pred_landmarks * configs['img_size']
-                landmarks = data['landmark'].numpy() * configs['img_size']
+                landmarks = landmarks * configs['img_size']
 
                 PCK_acc += PCK(pred_landmarks, landmarks, 
                                 self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])

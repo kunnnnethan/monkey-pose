@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
     train_set, train_dataloader = load_data(
         configs['data_path'], 
+        configs['preprocess'],
         configs['model_type'], 
         configs['batch_size'], 
         configs['img_size'], 
@@ -27,13 +28,12 @@ if __name__ == "__main__":
     )
 
     print("length of train set: ", train_set.__len__())
-    for _, (images, heatmaps, joints_weight, data) in enumerate(tqdm(train_dataloader)):
+    for _, (images, heatmaps, joints_weight, landmarks) in enumerate(tqdm(train_dataloader)):
         images[:, 0] = images[:, 0] * 0.229 + 0.485
         images[:, 1] = images[:, 1] * 0.224 + 0.456
         images[:, 2] = images[:, 2] * 0.225 + 0.406
         images = images * 255.0
 
-        landmarks = data['landmark']
         landmarks = landmarks * configs['img_size']
         heatmaps = F.interpolate(heatmaps, size=(configs['img_size'], configs['img_size']), mode='bilinear', align_corners=True)
 

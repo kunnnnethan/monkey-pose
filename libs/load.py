@@ -5,12 +5,12 @@ import cv2
 import torch
 import numpy as np
 import torchvision.transforms as transforms
-
 from torch.utils.data import Dataset, DataLoader
 
+from libs.preprocess import MonkeyPreprocess
 
 class MonkeyDataset(Dataset):
-    def __init__(self, data_path, model_type, img_size, num_joints, sigma):
+    def __init__(self, data_path, preprocess, model_type, img_size, num_joints, sigma):
         super().__init__()
         json_file_path = glob.glob(os.path.join(data_path, "*.json"))[0]
         metadata = self.read_data(json_file_path)
@@ -42,67 +42,33 @@ class MonkeyDataset(Dataset):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
+
+        self.preprocess = MonkeyPreprocess(self.img_size, self.num_joints, preprocess)
         
     def __getitem__(self, idx):
         img = cv2.imread(self.img_paths[idx], cv2.IMREAD_COLOR)
         bbox = np.array(self.bboxes[idx]).astype(np.float32)
         landmark = np.array(self.landmarks[idx]).astype(np.float32).reshape(-1, 2)
         visibility = np.array(self.visibilities[idx]).astype(np.float32)
+        joints_weight = self.joints_weight.copy()
 
-        # crop objects based on bbox
-        img, bbox, landmark = self.crop_image(img, bbox, landmark)
-
-        # normalize landmark and bbox with respect to image size
-        img, bbox, landmark = self._normalize(img, bbox, landmark)
+        # do data preprocessing-> crop objects based on bbox and do augmentations
+        img, landmark, joints_weight = self.preprocess.apply(img, bbox, landmark, joints_weight)
 
         # generate groundtruth heatmap
-        #heatmaps1 = self.gen_heatmap(landmark, 9)
-        #heatmaps2 = self.gen_heatmap(landmark, 3)
-        #heatmaps3 = self.gen_heatmap(landmark, 1)
-        #heatmaps = np.concatenate([heatmaps1, heatmaps2, heatmaps3])
         heatmaps = self.gen_heatmap(landmark, 1)
 
         # generate weights for different joints while training
-        joints_weight = self.gen_weights(visibility)
+        joints_weight = self.gen_weights(visibility, joints_weight)
 
         img = cv2.resize(img, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = self.transform(img)
 
-        data = {'bbox': bbox, 'landmark': landmark}
-
-        return img, heatmaps, joints_weight, data
+        return img, heatmaps, joints_weight, landmark
             
     def __len__(self):
         return len(self.img_paths)
-
-    def _normalize(self, img, bbox, landmark):
-        height, width, _ = img.shape
-        bbox[0] = bbox[0] / width
-        bbox[1] = bbox[1] / height
-        bbox[2] = bbox[2] / width
-        bbox[3] = bbox[3] / height
-        landmark[:, 0] = landmark[:, 0] / width
-        landmark[:, 1] = landmark[:, 1] / height
-        return img, bbox, landmark
-
-    def crop_image(self, img, bbox, landmark):
-        x1, y1, w, h = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
-        x2, y2 = x1 + w, y1 + h
-
-        size = max(h, w)
-        
-        new_img = np.zeros((size, size, 3), dtype=np.uint8)
-        
-        new_img[:h, :w] = img[y1:y2, x1:x2]
-
-        bbox[0] = bbox[0] - x1
-        bbox[1] = bbox[1] - y1
-
-        landmark[:, 0] = landmark[:, 0] - x1
-        landmark[:, 1] = landmark[:, 1] - y1
-
-        return new_img, bbox, landmark
 
     def gen_heatmap(self, landmark, scale):
         target = np.zeros((self.num_joints, self.map_size, self.map_size), dtype=np.float32)
@@ -137,8 +103,8 @@ class MonkeyDataset(Dataset):
 
         return target
 
-    def gen_weights(self, visibility):
-        joints_weight = np.multiply(visibility, self.joints_weight)
+    def gen_weights(self, visibility, joints_weight):
+        joints_weight = np.multiply(visibility, joints_weight)
         return joints_weight
 
     def read_data(self, json_path):
@@ -170,7 +136,7 @@ class MonkeyDataset(Dataset):
         return metadata
 
 
-def load_data(data_path, model_type, batch_size, img_size, num_joints, sigma, shuffle):
-    dataset = MonkeyDataset(data_path, model_type, img_size, num_joints, sigma)
+def load_data(data_path, preprocess, model_type, batch_size, img_size, num_joints, sigma, shuffle):
+    dataset = MonkeyDataset(data_path, preprocess, model_type, img_size, num_joints, sigma)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
     return dataset, dataloader
