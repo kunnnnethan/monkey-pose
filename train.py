@@ -1,5 +1,5 @@
 import torch, os, random
-import yaml
+import yaml, json
 import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
@@ -53,7 +53,7 @@ class Train:
             self.configs['sigma'],
             "train"
         )
-        print("The number of data in train set: ", train_set.__len__())
+        print("The number of data in train set: {}, validation set: {}".format(train_set.__len__(), valid_set.__len__()))
 
         self.model = self.model.to(self.device)
 
@@ -64,6 +64,13 @@ class Train:
             criterion = JointsMSELoss(self.configs['use_joints_weight'])
 
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.configs['learning_rate'])
+
+        log_dict = {
+            "train_loss_list": [],
+            "train_PCK_acc_list": [],
+            "val_loss_list": [],
+            "val_PCK_acc_list": []
+        }
 
         for epoch in range(self.configs['epochs']):
             train_loss, val_loss = 0, 0
@@ -91,6 +98,7 @@ class Train:
                     loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                 elif self.configs['model_type'] == "custom":
                     pred1, pred2, output = self.model(images)
+                    #pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
                     loss1 = criterion(pred1, heatmaps, joints_weight)
                     loss2 = criterion(pred2, heatmaps, joints_weight)
@@ -100,6 +108,7 @@ class Train:
                     #loss6 = criterion(output, heatmaps, joints_weight)
 
                     loss = loss1 + loss2 + loss3
+                    #loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                 else:
                     output = self.model(images)
                     loss = criterion(output, heatmaps, joints_weight)
@@ -121,14 +130,34 @@ class Train:
                 with torch.no_grad():
                     images = images.to(self.device)
                     heatmaps = heatmaps.to(self.device)
+                    joints_weight = joints_weight.to(self.device)
 
                     output = None
                     if self.configs['model_type'] == "CPM":
                         pred1, pred2, pred3, pred4, pred5, output = self.model(images)
+
+                        loss1 = criterion(pred1, heatmaps)
+                        loss2 = criterion(pred2, heatmaps)
+                        loss3 = criterion(pred3, heatmaps)
+                        loss4 = criterion(pred4, heatmaps)
+                        loss5 = criterion(pred5, heatmaps)
+                        loss6 = criterion(output, heatmaps)
+
+                        loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                     elif self.configs['model_type'] == "custom":
                         pred1, pred2, output = self.model(images)
+                        #pred1, pred2, pred3, pred4, pred5, output = self.model(images)
+
+                        loss1 = criterion(pred1, heatmaps, joints_weight)
+                        loss2 = criterion(pred2, heatmaps, joints_weight)
+                        loss3 = criterion(output, heatmaps, joints_weight)
+
+                        loss = loss1 + loss2 + loss3
                     else:
                         output = self.model(images)
+                        loss = criterion(output, heatmaps, joints_weight)
+
+                    val_loss += loss.item()
 
                     pred_landmarks, maxvals = get_max_preds(output.cpu().numpy())
                     pred_landmarks = pred_landmarks * configs['img_size']
@@ -141,7 +170,22 @@ class Train:
                     .format(epoch + 1, 
                     train_loss, PCK_train_acc / train_dataloader.__len__(), 
                     val_loss, PCK_val_acc / val_dataloader.__len__()))
-            torch.save(self.model.state_dict(), os.path.join("weights", self.configs['model_name']))
+            torch.save(self.model.state_dict(), os.path.join("weights", self.configs['model_name'] + ".pth"))
+
+            log_dict["train_loss_list"].append(train_loss)
+            log_dict["train_PCK_acc_list"].append(PCK_train_acc / train_dataloader.__len__())
+            log_dict["val_loss_list"].append(val_loss)
+            log_dict["val_PCK_acc_list"].append(PCK_val_acc / val_dataloader.__len__())
+
+        # --------------------------
+        # Save Logs into .json file
+        # --------------------------
+        logs_path = os.path.join("logs", self.configs['model_name'])
+        if not os.path.exists(logs_path):
+            os.mkdir(logs_path)
+
+        with open(os.path.join(logs_path, "history.json"), "w") as outfile:
+            json.dump(log_dict, outfile, ensure_ascii=False, indent=4)
 
 
 if __name__ == "__main__":

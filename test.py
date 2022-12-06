@@ -51,7 +51,7 @@ class Test:
             self.configs['img_size'], 
             self.configs['num_joints'], 
             self.configs['sigma'], 
-            False
+            "test"
         )
         print("The number of data in test set: ", test_set.__len__())
 
@@ -83,7 +83,7 @@ class Test:
 
                 pred_landmarks, maxvals = get_max_preds(output.cpu().numpy())
                 pred_landmarks = pred_landmarks * configs['img_size']
-                landmarks = landmarks * configs['img_size']
+                landmarks = landmarks.numpy() * configs['img_size']
 
                 PCK_acc += PCK(pred_landmarks, landmarks, 
                                 self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])

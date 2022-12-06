@@ -10,7 +10,7 @@ from libs.draw import draw_limbs, draw_joints
 
 if __name__ == "__main__":
     configs = None
-    with open("configs/train.yaml", "r") as stream:
+    with open("configs/test.yaml", "r") as stream:
         try:
             configs = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         configs['img_size'], 
         configs['num_joints'], 
         configs['sigma'], 
-        False
+        "test"
     )
 
     print("length of train set: ", train_set.__len__())
