@@ -138,11 +138,9 @@ class MonkeyDataset(Dataset):
 
 def load_data(data_path, preprocess, model_type, batch_size, img_size, num_joints, sigma, action):
     if action == "train":
-        train_set = MonkeyDataset(data_path, preprocess, model_type, img_size, num_joints, sigma)
-        train_set_size = int(len(train_set) * 0.8)
-        valid_set_size = len(train_set) - train_set_size
-        train_set, valid_set = random_split(train_set, [train_set_size, valid_set_size])
-
+        assert type(data_path) == list, "Your data_path for training must be a list with length of 2. The list must contain image paths for training and validation"
+        train_set = MonkeyDataset(data_path[0], preprocess, model_type, img_size, num_joints, sigma)
+        valid_set = MonkeyDataset(data_path[1], preprocess, model_type, img_size, num_joints, sigma)
         train_dataloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
         val_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=False, num_workers=4)
         return train_set, valid_set, train_dataloader, val_dataloader
