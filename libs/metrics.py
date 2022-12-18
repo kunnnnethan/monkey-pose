@@ -2,12 +2,6 @@ import torch
 import numpy as np
 
 
-def calc_class_accuracy(preds, target):
-    prediction = torch.argmax(preds, dim=1)
-    acc = torch.mean(torch.eq(prediction, target).type(torch.float32))
-    return acc
-
-
 def calc_dists(preds, target, normalize):
         preds = preds.astype(np.float32)
         target = target.astype(np.float32)
@@ -22,7 +16,7 @@ def calc_dists(preds, target, normalize):
                     dists[c, n] = -1
         return dists
 
-def dist_acc(dists, thr=0.5):
+def dist_acc(dists, thr=0.05):
         ''' Return percentage below threshold while ignoring values with a -1 '''
         dist_cal = np.not_equal(dists, -1)
         num_dist_cal = dist_cal.sum()
@@ -41,19 +35,23 @@ def PCK(pred, target, h, w, num_joints):
     '''
 
     # h and w is the size of the bbox; the distance is defined as a fraction of the bounding box size
-    norm = np.ones((pred.shape[0], 2)) * np.array([h, w]) / 10
+    norm = np.ones((pred.shape[0], 2)) * np.array([h, w])
 
     dists = calc_dists(pred, target, norm)
 
-    acc = np.zeros((num_joints))
+    idx = list(range(num_joints))
+    acc = np.zeros((len(idx) + 1))
     avg_acc = 0
     cnt = 0
 
-    for i in range(num_joints):
-        acc[i] = dist_acc(dists[i])
-        if acc[i] >= 0:
-            avg_acc = avg_acc + acc[i]
+    for i in range(len(idx)):
+        acc[i + 1] = dist_acc(dists[idx[i]])
+        if acc[i + 1] >= 0:
+            avg_acc = avg_acc + acc[i + 1]
             cnt += 1
 
     avg_acc = avg_acc / cnt if cnt != 0 else 0
-    return avg_acc
+    if cnt != 0:
+        acc[0] = avg_acc
+        
+    return acc
