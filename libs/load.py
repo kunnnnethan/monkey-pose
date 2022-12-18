@@ -32,8 +32,8 @@ class MonkeyDataset(Dataset):
         self.num_joints = num_joints
         self.joints_weight = np.array(
             [
-                1., 1., 1., 1., 1., 1.2, 1.5, 1.5, 1.2,
-                1.5, 1.5, 1.2, 1.2, 1.5, 1.2, 1.5, 1.5
+                1., 1., 1., 1., 1., 1.5, 1.2, 1.2, 1.5,
+                1.2, 1.2, 1.5, 1.5, 1.2, 1.5, 1.2, 1.2
             ],
             dtype=np.float32
         )
@@ -53,10 +53,14 @@ class MonkeyDataset(Dataset):
         joints_weight = self.joints_weight.copy()
 
         # do data preprocessing-> crop objects based on bbox and do augmentations
-        img, landmark, joints_weight = self.preprocess.apply(img, bbox, landmark, joints_weight)
+        img, landmark, joints_weight, visibility = self.preprocess.apply(img, bbox, landmark, joints_weight, visibility)
 
         # generate groundtruth heatmap
         heatmaps = self.gen_heatmap(landmark, 1)
+        #heatmaps1 = self.gen_heatmap(landmark, 3)
+        #heatmaps2 = self.gen_heatmap(landmark, 2)
+        #heatmaps3 = self.gen_heatmap(landmark, 1)
+        #heatmaps = np.concatenate([heatmaps1, heatmaps2, heatmaps3])
 
         # generate weights for different joints while training
         joints_weight = self.gen_weights(visibility, joints_weight)
@@ -139,8 +143,8 @@ class MonkeyDataset(Dataset):
 def load_data(data_path, preprocess, model_type, batch_size, img_size, num_joints, sigma, action):
     if action == "train":
         assert type(data_path) == list, "Your data_path for training must be a list with length of 2. The list must contain image paths for training and validation"
-        train_set = MonkeyDataset(data_path[0], preprocess, model_type, img_size, num_joints, sigma)
-        valid_set = MonkeyDataset(data_path[1], preprocess, model_type, img_size, num_joints, sigma)
+        train_set = MonkeyDataset(data_path[0], preprocess['train'], model_type, img_size, num_joints, sigma)
+        valid_set = MonkeyDataset(data_path[1], preprocess['valid'], model_type, img_size, num_joints, sigma)
         train_dataloader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=4)
         val_dataloader = DataLoader(valid_set, batch_size=batch_size, shuffle=False, num_workers=4)
         return train_set, valid_set, train_dataloader, val_dataloader
