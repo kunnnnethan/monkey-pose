@@ -11,9 +11,11 @@ from libs.load import load_data
 from libs.draw import draw_limbs, draw_joints
 from libs.utils import get_max_preds
 from libs.metrics import PCK
+
 from model.HRNet import HRNet
 from model.CPM import CPM
-from model.CPM2 import CPM2
+from model.CPHRNet import CPHRNet
+from model.CPHRNetv2 import CPHRNetv2
 
 
 class Test:
@@ -23,22 +25,20 @@ class Test:
         if configs['model_type'] == "CPM":
             self.model = CPM(self.configs['num_joints'])
         elif configs['model_type'] == "HRNet":
-            self.model = HRNet(48, self.configs['num_joints'])
-        elif configs['model_type'] == "custom":
-            self.model = CPM2(self.configs['num_joints'], 48, 32)
+            self.model = HRNet(self.configs['num_channels'], self.configs['num_joints'])
+        elif configs['model_type'] == "CPHRNet":
+            self.model = CPHRNet(self.configs['num_channels'], self.configs['num_joints'])
+        elif configs['model_type'] == "CPHRNetv2":
+            self.model = CPHRNetv2(self.configs['num_channels'], 32, self.configs['num_joints'])
         else:
             raise NotImplementedError("Please specify model type in CPM or HRNet")
 
     def load_model(self):
-        weight_path = os.path.join("weights", self.configs['model_name'])
+        weight_path = os.path.join("weights", self.configs['model_name'] + ".pth")
         if os.path.exists(weight_path):
             self.model.load_state_dict(torch.load(weight_path, map_location=self.device))
         else:
             assert False, "Model is not exist in {}".format(weight_path)
-
-        weight = torch.load(weight_path, map_location=self.device)
-        self.model = self.model.to(self.device)
-        self.model.load_state_dict(weight)
 
     def detect(self):
         print("Using device:", self.device)
@@ -55,10 +55,11 @@ class Test:
         )
         print("The number of data in test set: ", test_set.__len__())
 
+        self.model = self.model.to(self.device)
         self.load_model()
         self.model.eval()
 
-        PCK_acc = 0.0
+        PCK_acc = np.zeros(self.configs['num_joints'] + 1)
         start_time = time.time()
         # --------------------------
         # Testing Stage
@@ -69,9 +70,9 @@ class Test:
                 heatmaps = heatmaps.to(self.device)
 
                 output = None
-                if self.configs['model_type'] == "CPM":
+                if self.configs['model_type'] in ["CPM", "CPHRNet"]:
                     _, _, _, _, _, output = self.model(images)
-                elif self.configs['model_type'] == "custom":
+                elif self.configs['model_type'] == "CPHRNetv2":
                     _, _, output = self.model(images)
                 else:
                     output = self.model(images)
@@ -85,8 +86,9 @@ class Test:
                 pred_landmarks = pred_landmarks * configs['img_size']
                 landmarks = landmarks.numpy() * configs['img_size']
 
-                PCK_acc += PCK(pred_landmarks, landmarks, 
+                acc = PCK(pred_landmarks, landmarks, 
                                 self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])
+                PCK_acc += np.array(acc)
 
                 if self.configs['display_results']:
                     pred_maps = F.interpolate(output, size=(self.configs['img_size'], self.configs['img_size']), 
@@ -138,8 +140,21 @@ class Test:
 
         end_time = time.time()
 
+        summary = []
+        summary.append(PCK_acc[0])
+        summary.append(PCK_acc[4])
+        summary.append(PCK_acc[5])
+        summary.append((PCK_acc[6] + PCK_acc[9]) / 2)
+        summary.append((PCK_acc[7] + PCK_acc[10]) / 2)
+        summary.append((PCK_acc[8] + PCK_acc[11]) / 2)
+        summary.append(PCK_acc[12])
+        summary.append((PCK_acc[13] + PCK_acc[15]) / 2)
+        summary.append((PCK_acc[14] + PCK_acc[16]) / 2)
+        summary.append(PCK_acc[17])
+        summary = np.array(summary)
+
         print("Accuracy of pose estimation: {}, Testing cost {} sec(s) per image"
-                .format(PCK_acc / test_dataloader.__len__(), 
+                .format(summary / test_dataloader.__len__(), 
                         (end_time - start_time) / test_set.__len__()))
 
 

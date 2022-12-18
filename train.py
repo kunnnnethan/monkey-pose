@@ -8,10 +8,11 @@ from libs.load import load_data
 from libs.loss import JointsMSELoss
 from libs.utils import get_max_preds
 from libs.metrics import PCK
+
 from model.HRNet import HRNet
 from model.CPM import CPM
-from model.CPM2 import CPM2
-from model.CPM3 import CPM3
+from model.CPHRNet import CPHRNet
+from model.CPHRNetv2 import CPHRNetv2
 
 
 def init():
@@ -24,20 +25,26 @@ def init():
 
 class Train:
     def __init__(self, configs):
+        self.make_paths()
         self.configs = configs
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = None
         if configs['model_type'] == "CPM":
             self.model = CPM(self.configs['num_joints'])
         elif configs['model_type'] == "HRNet":
-            self.model = HRNet(48, self.configs['num_joints'])
-        elif configs['model_type'] == "custom":
-            self.model = CPM2(self.configs['num_joints'], 48, 32)
+            self.model = HRNet(self.configs['num_channels'], self.configs['num_joints'])
+        elif configs['model_type'] == "CPHRNet":
+            self.model = CPHRNet(self.configs['num_channels'], self.configs['num_joints'])
+        elif configs['model_type'] == "CPHRNetv2":
+            self.model = CPHRNetv2(self.configs['num_channels'], 32, self.configs['num_joints'])
         else:
-            raise NotImplementedError("Please specify model type in CPM or HRNet")
+            raise NotImplementedError("Please specify model type in ['CPM', 'HRNet', CPHRNet', CPHRNetv2']")
+    
+    def make_paths(self):
         if not os.path.exists("weights/"):
             os.mkdir("weights/")
-
+        if not os.path.exists("logs/"):
+            os.mkdir("logs/")
 
     def train(self):
         init()
@@ -57,12 +64,7 @@ class Train:
 
         self.model = self.model.to(self.device)
 
-        criterion = None
-        if self.configs['model_type'] == "CPM":
-            criterion = nn.MSELoss()
-        else:
-            criterion = JointsMSELoss(self.configs['use_joints_weight'])
-
+        criterion = JointsMSELoss(self.configs['use_joints_weight'])
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.configs['learning_rate'])
 
         log_dict = {
@@ -85,30 +87,25 @@ class Train:
                 optimizer.zero_grad()
 
                 loss, output = None, None
-                if self.configs['model_type'] == "CPM":
+                if self.configs['model_type'] in ["CPM", "CPHRNet"]:
                     pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
-                    loss1 = criterion(pred1, heatmaps)
-                    loss2 = criterion(pred2, heatmaps)
-                    loss3 = criterion(pred3, heatmaps)
-                    loss4 = criterion(pred4, heatmaps)
-                    loss5 = criterion(pred5, heatmaps)
-                    loss6 = criterion(output, heatmaps)
+                    loss1 = criterion(pred1, heatmaps, joints_weight)
+                    loss2 = criterion(pred2, heatmaps, joints_weight)
+                    loss3 = criterion(pred3, heatmaps, joints_weight)
+                    loss4 = criterion(pred4, heatmaps, joints_weight)
+                    loss5 = criterion(pred5, heatmaps, joints_weight)
+                    loss6 = criterion(output, heatmaps, joints_weight)
 
                     loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-                elif self.configs['model_type'] == "custom":
+                elif self.configs['model_type'] == "CPHRNetv2":
                     pred1, pred2, output = self.model(images)
-                    #pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
                     loss1 = criterion(pred1, heatmaps, joints_weight)
                     loss2 = criterion(pred2, heatmaps, joints_weight)
                     loss3 = criterion(output, heatmaps, joints_weight)
-                    #loss4 = criterion(pred4, heatmaps, joints_weight)
-                    #loss5 = criterion(pred5, heatmaps, joints_weight)
-                    #loss6 = criterion(output, heatmaps, joints_weight)
 
                     loss = loss1 + loss2 + loss3
-                    #loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                 else:
                     output = self.model(images)
                     loss = criterion(output, heatmaps, joints_weight)
@@ -123,7 +120,7 @@ class Train:
                 landmarks = landmarks.numpy() * configs['img_size']
 
                 PCK_train_acc += PCK(pred_landmarks, landmarks, 
-                                self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])
+                                self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])[0]
 
             self.model.eval()
             for i, (images, heatmaps, joints_weight, landmarks) in enumerate(tqdm(val_dataloader)):
@@ -133,7 +130,7 @@ class Train:
                     joints_weight = joints_weight.to(self.device)
 
                     output = None
-                    if self.configs['model_type'] == "CPM":
+                    if self.configs['model_type'] in ["CPM", "CPHRNet"]:
                         pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
                         loss1 = criterion(pred1, heatmaps)
@@ -144,9 +141,8 @@ class Train:
                         loss6 = criterion(output, heatmaps)
 
                         loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
-                    elif self.configs['model_type'] == "custom":
+                    elif self.configs['model_type'] == "CPHRNetv2":
                         pred1, pred2, output = self.model(images)
-                        #pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
                         loss1 = criterion(pred1, heatmaps, joints_weight)
                         loss2 = criterion(pred2, heatmaps, joints_weight)
@@ -164,7 +160,7 @@ class Train:
                     landmarks = landmarks.numpy() * configs['img_size']
 
                     PCK_val_acc += PCK(pred_landmarks, landmarks, 
-                                    self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])
+                                    self.configs['img_size'], self.configs['img_size'], self.configs['num_joints'])[0]
                 
             print("Epoch: {}, train_loss: {}, train_acc: {}, val_loss: {}, val_acc: {}"
                     .format(epoch + 1, 
