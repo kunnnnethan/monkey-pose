@@ -6,7 +6,7 @@ from model.HRNetSmall import HRNetSmall
 
 
 class CPHRNetv2(nn.Module):
-    def __init__(self, k, c1, c2):
+    def __init__(self, c1, c2, k):
         super(CPHRNetv2, self).__init__()
         self.k = k
         self.features_extractor = HRNetv2(c1)

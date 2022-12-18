@@ -6,7 +6,7 @@ from model.HRNetv2 import HRNetv2
 
 
 class CPHRNet(nn.Module):
-    def __init__(self, k, c):
+    def __init__(self, c, k):
         super(CPHRNet, self).__init__()
         self.k = k
         self.c = c
