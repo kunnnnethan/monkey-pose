@@ -140,22 +140,21 @@ class Test:
 
         end_time = time.time()
 
-        summary = []
-        summary.append(PCK_acc[0])
-        summary.append(PCK_acc[4])
-        summary.append(PCK_acc[5])
-        summary.append((PCK_acc[6] + PCK_acc[9]) / 2)
-        summary.append((PCK_acc[7] + PCK_acc[10]) / 2)
-        summary.append((PCK_acc[8] + PCK_acc[11]) / 2)
-        summary.append(PCK_acc[12])
-        summary.append((PCK_acc[13] + PCK_acc[15]) / 2)
-        summary.append((PCK_acc[14] + PCK_acc[16]) / 2)
-        summary.append(PCK_acc[17])
-        summary = np.array(summary)
+        PCK_acc /= test_dataloader.__len__()
+        summary = {}
+        summary["overall"] = PCK_acc[0]
+        summary["head"] = PCK_acc[4]
+        summary["neck"] = PCK_acc[5]
+        summary["shoulder"] = (PCK_acc[6] + PCK_acc[9]) / 2
+        summary["elbow"] = (PCK_acc[7] + PCK_acc[10]) / 2
+        summary["wrist"] = (PCK_acc[8] + PCK_acc[11]) / 2
+        summary["hip"] = PCK_acc[12]
+        summary["knee"] = (PCK_acc[13] + PCK_acc[15]) / 2
+        summary["angle"] = (PCK_acc[14] + PCK_acc[16]) / 2
+        summary["tail"] = PCK_acc[17]
 
         print("Accuracy of pose estimation: {}, Testing cost {} sec(s) per image"
-                .format(summary / test_dataloader.__len__(), 
-                        (end_time - start_time) / test_set.__len__()))
+                .format(summary, (end_time - start_time) / test_set.__len__()))
 
 
 if __name__ == "__main__":

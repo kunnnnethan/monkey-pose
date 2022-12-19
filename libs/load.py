@@ -20,13 +20,7 @@ class MonkeyDataset(Dataset):
         self.visibilities = metadata['visibilities']
 
         self.img_size = img_size
-        self.map_size = None
-        if model_type == "CPM":
-            self.map_size = self.img_size // 8
-        elif model_type == "custom":
-            self.map_size = self.img_size // 4
-        else:
-            self.map_size = self.img_size // 4
+        self.map_size = self.img_size // 8 if model_type == "CPM" else self.img_size // 4
         self.sigma = sigma
 
         self.num_joints = num_joints

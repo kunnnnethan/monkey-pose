@@ -133,12 +133,12 @@ class Train:
                     if self.configs['model_type'] in ["CPM", "CPHRNet"]:
                         pred1, pred2, pred3, pred4, pred5, output = self.model(images)
 
-                        loss1 = criterion(pred1, heatmaps)
-                        loss2 = criterion(pred2, heatmaps)
-                        loss3 = criterion(pred3, heatmaps)
-                        loss4 = criterion(pred4, heatmaps)
-                        loss5 = criterion(pred5, heatmaps)
-                        loss6 = criterion(output, heatmaps)
+                        loss1 = criterion(pred1, heatmaps, joints_weight)
+                        loss2 = criterion(pred2, heatmaps, joints_weight)
+                        loss3 = criterion(pred3, heatmaps, joints_weight)
+                        loss4 = criterion(pred4, heatmaps, joints_weight)
+                        loss5 = criterion(pred5, heatmaps, joints_weight)
+                        loss6 = criterion(output, heatmaps, joints_weight)
 
                         loss = loss1 + loss2 + loss3 + loss4 + loss5 + loss6
                     elif self.configs['model_type'] == "CPHRNetv2":
