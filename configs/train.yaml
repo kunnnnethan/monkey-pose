@@ -1,23 +1,31 @@
 # model
 num_joints: 17
-model_type: "custom"
-model_name: "CPM10.model"
+model_type: "CPHRNetv2"
+model_name: "CPHRNetv2"
+num_channels: 48 # this parameter will not be used if CPM is specified
 
 # dataset
-data_path: "data/train"
-batch_size: 16
-img_size: 384
-sigma: 3
+data_path: ["data/train", "data/val"]
+batch_size: 32
+img_size: 256
+sigma: 2
 
 # hyperparameters
-epochs: 30
-learning_rate: 0.001
+epochs: 50
+learning_rate: 0.0002
 
 # loss
 use_joints_weight: True
 
 # augmentation
 preprocess:
-  rotate: True
-  horizontal_flip: True
-  hsv: True
+  train:
+    rotate: True
+    scale: True
+    horizontal_flip: True
+    hsv: True
+  valid:
+    rotate: False
+    scale: False
+    horizontal_flip: False
+    hsv: False

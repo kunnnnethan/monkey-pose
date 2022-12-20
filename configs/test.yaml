@@ -1,19 +1,21 @@
 # model
 num_joints: 17
-model_type: "custom"
-model_name: "CPM10.model"
+model_type: "CPHRNetv2"
+model_name: "CPHRNetv2"
+num_channels: 48 # this parameter will not be used if CPM is specified
 
 # dataset
 data_path: "data/val"
-batch_size: 16
-img_size: 384
-sigma: 3
+batch_size: 32
+img_size: 256
+sigma: 2
 
 # result
 display_results: False
 
 # augmentation
 preprocess:
-  rotate: True
-  horizontal_flip: True
-  hsv: True
+  rotate: False
+  scale: False
+  horizontal_flip: False
+  hsv: False
