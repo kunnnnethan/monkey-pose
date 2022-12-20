@@ -16,7 +16,7 @@ Since we are using top-down methods for monkey pose estimation, we crop the regi
 
 ### Model
 
-<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/model.png" alt="model" width=80% height=80%/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/model.png" alt="model" width=120% height=120%/>
 
 We take advantage of HRNet by replacing the features extractor with the entire HRNet and replacing convolution blocks in every CPMs stage with HRNets of simpler version to further increase the complexity of the entire model. We create small-HRNet by discarding the fourth modularized block in the original HRNet and reducing the number of convolution layers in every modularized block. We use total three stages for our CPM- HRNet-combined model.
 
@@ -33,7 +33,7 @@ We take advantage of HRNet by replacing the features extractor with the entire H
 
 **Model Outputs:**
 
-<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/result.png" alt="result" height="300"/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/result.png" alt="result" width=120% height=120%/>
 
 
 ### Usage
