@@ -12,7 +12,7 @@ In this project, we proposed combining HRNet and the structure of CPMs together 
 
 The study collected 112,360 images related to 26 species of primates. In our experiments, 66917 images are used for training, and 22306 images are used for validation and testing. More details of the dataset can be found in [here](https://competitions.codalab.org/competitions/34342).
 
-Since we are using top-down methods for monkey pose estimation, we crop the region in which each monkey is relying for each image first according to the location of ground truth bounding boxes and place it in the center of the new image to specify which monkey should the model focuses on.
+Since we are using top-down methods for monkey pose estimation, we crop the region in which each monkey is relying for each image first according to the location of ground truth bounding boxes and place it in the center of the new image to specify which monkey should the model focus on.
 
 ### Model
 
