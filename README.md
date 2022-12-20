@@ -33,7 +33,7 @@ We take advantage of HRNet by replacing the features extractor with the entire H
 
 **Model Outputs:**
 
-<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/result.png" alt="result" width=50% height=50%/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/result.png" alt="result" width=30% height=30%/>
 
 
 ### Usage
