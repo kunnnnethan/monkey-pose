@@ -16,13 +16,13 @@ Since we are using top-down methods for monkey pose estimation, we crop the regi
 
 ### Model
 
-<img src="https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/figures/model.png" alt="model" height="400"/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/model.png" alt="model" height="400"/>
 
 We take advantage of HRNet by replacing the features extractor with the entire HRNet and replacing convolution blocks in every CPMs stage with HRNets of simpler version to further increase the complexity of the entire model. We create small-HRNet by discarding the fourth modularized block in the original HRNet and reducing the number of convolution layers in every modularized block. We use total three stages for our CPM- HRNet-combined model.
 
 ### Results
 
-<img src="https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/figures/train_acc.png" alt="train_acc" height="300"/><img src="https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/figures/val_acc.png" alt="val_acc" height="300"/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/train_acc.png" alt="train_acc" height="300"/><img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/val_acc.png" alt="val_acc" height="300"/>
 
 | Method | Accuracy (PCK@0.05) |
 | -------- | -------- |
@@ -33,7 +33,7 @@ We take advantage of HRNet by replacing the features extractor with the entire H
 
 **Model Outputs:**
 
-<img src="https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/figures/result.png" alt="result" height="300"/>
+<img src="https://github.com/kunnnnethan/monkey-pose/blob/main/figures/result.png" alt="result" height="300"/>
 
 
 ### Usage
@@ -57,7 +57,7 @@ Afterwards, move train and validation annotation files to train and val file res
     ```
 
 2. **Train** </br>
-Modified arguments in [configs/train.yaml](https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/configs/train.yaml) file before training. Several augmentation methods are provided as well. Set the following arguments to True if augmentations are needed.
+Modified arguments in [configs/train.yaml](https://github.com/kunnnnethan/monkey-pose/blob/main/configs/train.yaml) file before training. Several augmentation methods are provided as well. Set the following arguments to True if augmentations are needed.
     ```yaml
     preprocess:
         rotate: False
@@ -71,7 +71,7 @@ Modified arguments in [configs/train.yaml](https://github.com/kunnnnethan/hand-g
     ```
 
 3. **Test** </br>
-Similarly, modified arguments in [configs/test.yaml](https://github.com/kunnnnethan/hand-gesture-recognition/blob/main/configs/test.yaml) file before testing. Set the following argument to True if you want to visualize predicted result.
+Similarly, modified arguments in [configs/test.yaml](https://github.com/kunnnnethan/monkey-pose/blob/main/configs/test.yaml) file before testing. Set the following argument to True if you want to visualize predicted result.
     ```yaml
     display_results: False
     ```
