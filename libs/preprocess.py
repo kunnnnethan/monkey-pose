@@ -22,8 +22,9 @@ def get_affine_transform(center, scale, rot, original_size, output_size, shift=n
     dst_center = np.array([output_size[0] * 0.5, output_size[1] * 0.5])
 
     rot_rad = np.pi * rot / 180
-    src_w = get_dir([original_size[1] * -0.5, 0], rot_rad)
-    src_h = get_dir([0, original_size[1] * -0.5], rot_rad)
+    size = max(original_size[0], original_size[1])
+    src_w = get_dir([size * -0.5, 0], rot_rad)
+    src_h = get_dir([0, size * -0.5], rot_rad)
 
     dst_w = np.array([output_size[0] * -0.5, 0], np.float32)
     dst_h = np.array([0, output_size[1] * -0.5], np.float32)
