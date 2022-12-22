@@ -5,7 +5,7 @@ import cv2
 import torch
 import numpy as np
 import torchvision.transforms as transforms
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader
 
 from libs.preprocess import MonkeyPreprocess
 
@@ -55,7 +55,6 @@ class MonkeyDataset(Dataset):
         # generate weights for different joints while training
         joints_weight = self.gen_weights(visibility, joints_weight)
 
-        img = cv2.resize(img, (self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = self.transform(img)
 

@@ -66,11 +66,11 @@ class MonkeyPreprocess:
         if self.hsv and np.random.rand() > 0.5:
             img = self.hsv_(img)
         
-        img, landmark, joints_weight = self.process_image(img, bbox, landmark, joints_weight)
+        img, landmark, joints_weight = self.crop_(img, bbox, landmark, joints_weight)
 
         return img, landmark, joints_weight, visibility
 
-    def process_image(self, img, bbox, landmark, joints_weight):
+    def crop_(self, img, bbox, landmark, joints_weight):
         x, y, w, h = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
 
         center = np.array([x + w * 0.5, y + h * 0.5], dtype=np.float32)
