@@ -80,7 +80,7 @@ Similarly, modified arguments in [configs/test.yaml](https://github.com/kunnnnet
     python test.py
     ```
     You can also download weights that I trained for our project:
-    * Model trained with augumentation: [CPHRNetv2](https://drive.google.com/uc?export=download&id=1V7JMERHAbamkJQ2n-eRwAXNOVtV8t3sm)
+    * Model trained with augumentation: [CPHRNetv2](https://drive.google.com/uc?export=download&id=1BQd6QvCiSqX0hHBVS5IdchqP0Kg6C17c)
     
 
 
